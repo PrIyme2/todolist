@@ -101,13 +101,11 @@
         const loginModal = document.getElementById('login-modal');
         const loginForm = document.getElementById('login-form');
 
-        // Funktion wartet, bis die Bibliothek im Window-Objekt registriert ist
         function startInitialization() {
             if (window.supabase && typeof window.supabase.createClient === 'function') {
                 supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
                 initApp();
             } else {
-                // Falls CDN verzögert lädt, in 100ms nochmal probieren
                 setTimeout(startInitialization, 100);
             }
         }
@@ -207,11 +205,16 @@
             btn.innerText = "Speichert…";
 
             const isPublic = (currentTab === 'public');
+            
+            // Verhindert, dass ein leerer String als UUID gesendet wird
             const payload = { 
                 title: title, 
-                is_public: isPublic, 
-                user_id: user ? user.id : null 
+                is_public: isPublic
             };
+            
+            if (user && user.id) {
+                payload.user_id = user.id;
+            }
 
             const { error } = await supabaseClient.from('todos').insert([payload]);
             
@@ -294,7 +297,6 @@
         }
         function escapeHTML(str) { return str ? str.replace(/[&<>'"]/g, t => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[t] || t)) : ''; }
 
-        // Starten, sobald das DOM bereit ist
         document.addEventListener('DOMContentLoaded', startInitialization);
     </script>
 </body>
