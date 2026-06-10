@@ -1,26 +1,25 @@
 <!DOCTYPE html>
-<html lang="de" class="scroll-smooth">
+<html lang="de">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title translate="no">ClassTask … Workspace</title>
+    <title translate="no">ClassTask — Workspace</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     
     <script>
-        // Tailwind Konfiguration für erweiterten Darkmode & Schriften
         tailwind.config = {
             darkMode: 'class',
             theme: {
                 extend: {
                     fontFamily: {
-                        sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
+                        sans: ['BlinkMacSystemFont', '-apple-system', 'Segoe UI', 'Roboto', 'Helvetica', 'Arial', 'sans-serif'],
                     }
                 }
             }
         }
 
-        // Darkmode Initialisierung (System-Präferenz oder Speicher)
+        // Darkmode Logik
         if (localStorage.getItem('theme') === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
             document.documentElement.classList.add('dark');
         } else {
@@ -29,98 +28,98 @@
     </script>
 
     <style>
-        *:focus-visible { outline: 2px solid #3b82f6; outline-offset: 2px; }
+        *:focus-visible { outline: 1px solid #10b981; outline-offset: 2px; }
         .tabular-numbers { font-variant-numeric: tabular-nums; }
-        /* Versteckt die Standard-Checkbox-Ästhetik für ein cleanes Custom-Design */
-        .custom-checkbox:checked + span { text-decoration: line-through; opacity: 0.5; }
+        /* HugoBlox Style Scrollbar */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+        .dark ::-webkit-scrollbar-thumb { background: #334155; }
     </style>
 </head>
-<body class="bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100 font-sans antialiased min-h-screen flex flex-col transition-colors duration-200">
+<body class="bg-white text-slate-900 dark:bg-slate-950 dark:text-slate-100 font-sans antialiased min-h-screen flex flex-col antialiased selection:bg-emerald-100 dark:selection:bg-emerald-950/50">
 
-    <header class="bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 sticky top-0 z-40 transition-colors duration-200">
-        <div class="max-w-4xl mx-auto px-4 h-16 flex items-center justify-between">
-            <div class="flex items-center gap-3">
-                <span class="text-xl font-bold tracking-tight bg-gradient-to-r from-blue-600 to-indigo-500 bg-clip-text text-transparent" translate="no">ClassTask</span>
-                <span class="text-[10px] bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400 px-2 py-0.5 rounded-full font-semibold tracking-wider uppercase">Pro</span>
+    <header class="bg-white/90 dark:bg-slate-950/90 border-b border-slate-200 dark:border-slate-800 sticky top-0 z-40">
+        <div class="max-w-4xl mx-auto px-6 h-16 flex items-center justify-between">
+            <div class="flex items-center gap-4">
+                <span class="text-base font-semibold tracking-tight uppercase" translate="no">ClassTask</span>
+                <span class="text-[10px] text-slate-400 border border-slate-200 dark:border-slate-800 px-1.5 py-0.2 font-mono uppercase">v1.1</span>
             </div>
             
-            <div class="flex items-center gap-4">
-                <button id="theme-toggle" aria-label="Farbschema wechseln" class="p-2 text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-100 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-all">
-                    <svg id="theme-toggle-sun" class="w-5 h-5 hidden dark:block" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364-6.364l-.707.707M6.343 17.657l-.707.707m12.728 0l-.707-.707M6.343 6.364l-.707-.707M12 8a4 4 0 100 8 4 4 0 000-8z"></path></svg>
-                    <svg id="theme-toggle-moon" class="w-5 h-5 block dark:hidden" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path></svg>
+            <div class="flex items-center gap-6">
+                <button id="theme-toggle" aria-label="Farbschema wechseln" class="text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100 transition-colors">
+                    <svg id="theme-toggle-sun" class="w-4 h-4 hidden dark:block" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364-6.364l-.707.707M6.343 17.657l-.707.707m12.728 0l-.707-.707M6.343 6.364l-.707-.707M12 8a4 4 0 100 8 4 4 0 000-8z"></path></svg>
+                    <svg id="theme-toggle-moon" class="w-4 h-4 block dark:hidden" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path></svg>
                 </button>
 
-                <div id="auth-status" class="flex items-center gap-3">
-                    <button id="btn-open-login" class="text-sm font-medium bg-slate-900 text-white hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-slate-200 px-4 py-2 rounded-xl shadow-sm transition-all">Anmelden</button>
+                <div id="auth-status">
+                    <button id="btn-open-login" class="text-xs font-medium border border-slate-900 dark:border-slate-100 px-3 py-1.5 hover:bg-slate-900 hover:text-white dark:hover:bg-slate-100 dark:hover:text-slate-950 transition-all">Anmelden</button>
                 </div>
             </div>
         </div>
     </header>
 
-    <main id="main-content" class="flex-grow max-w-3xl w-full mx-auto px-4 py-8">
+    <main id="main-content" class="flex-grow max-w-4xl w-full mx-auto px-6 py-12">
         
-        <div class="flex p-1 bg-slate-200/60 dark:bg-slate-900 rounded-xl mb-8" role="tablist">
-            <button id="tab-public" class="flex-1 py-2.5 text-center text-sm font-medium rounded-lg bg-white dark:bg-slate-800 text-blue-600 dark:text-blue-400 shadow-sm transition-all duration-200">
-                👥 Klassen-ToDos <span id="count-public" class="ml-1 text-xs bg-blue-50 dark:bg-blue-950/50 px-2 py-0.5 rounded-full tabular-numbers">0</span>
+        <div class="flex border-b border-slate-200 dark:border-slate-800 mb-8" role="tablist">
+            <button id="tab-public" class="pb-3 pr-6 text-sm font-semibold border-b-2 border-emerald-500 text-slate-950 dark:text-white transition-all">
+                👥 Klassen-ToDos <span id="count-public" class="ml-1 text-xs font-normal text-slate-400 dark:text-slate-500 tabular-numbers">(0)</span>
             </button>
-            <button id="tab-private" class="flex-1 py-2.5 text-center text-sm font-medium rounded-lg text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 transition-all duration-200">
-                🔒 Meine Aufgaben <span id="count-private" class="ml-1 text-xs bg-slate-300/40 dark:bg-slate-800 px-2 py-0.5 rounded-full tabular-numbers">0</span>
+            <button id="tab-private" class="pb-3 px-6 text-sm font-medium border-b-2 border-transparent text-slate-400 dark:text-slate-500 hover:text-slate-950 dark:hover:text-white transition-all">
+                🔒 Meine Aufgaben <span id="count-private" class="ml-1 text-xs font-normal text-slate-400 dark:text-slate-500 tabular-numbers">(0)</span>
             </button>
         </div>
 
-        <div id="error-toast" class="hidden mb-6 p-4 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900/50 text-red-700 dark:text-red-400 rounded-xl text-sm font-mono break-all" role="alert">
+        <div id="error-toast" class="hidden mb-6 p-3 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-900/50 text-red-700 dark:text-red-400 text-xs font-mono break-all">
             <span id="error-message"></span>
         </div>
 
-        <form id="todo-form" class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-4 rounded-2xl shadow-sm space-y-3 mb-8 transition-colors duration-200">
-            <div class="flex flex-col md:flex-row gap-3">
-                <input type="text" id="todo-input" required minlength="2" placeholder="Neue Aufgabe für die Klasse hinzufügen…" 
-                       class="flex-grow px-4 py-2.5 bg-slate-50 border border-slate-200 dark:bg-slate-950 dark:border-slate-800 rounded-xl focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-sm transition-all">
+        <form id="todo-form" class="flex flex-col sm:flex-row gap-3 border border-slate-200 dark:border-slate-800 p-3 bg-slate-50/50 dark:bg-slate-900/20 mb-8">
+            <input type="text" id="todo-input" required minlength="2" placeholder="Neue Aufgabe eintragen..." 
+                   class="flex-grow bg-transparent border-0 px-2 py-1 text-sm focus:ring-0 placeholder:text-slate-400 dark:placeholder:text-slate-600 outline-none">
+            
+            <div class="flex items-center gap-3 border-t sm:border-t-0 sm:border-l border-slate-200 dark:border-slate-800 pt-3 sm:pt-0 sm:pl-3">
+                <input type="date" id="todo-deadline" aria-label="Fälligkeitsdatum"
+                       class="bg-transparent border-0 text-xs font-mono text-slate-500 dark:text-slate-400 outline-none focus:ring-0 cursor-pointer">
                 
-                <div class="flex gap-2">
-                    <input type="date" id="todo-deadline" aria-label="Deadline festlegen"
-                           class="px-3 py-2.5 bg-slate-50 border border-slate-200 dark:bg-slate-950 dark:border-slate-800 rounded-xl text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-slate-500 dark:text-slate-400 transition-all">
-                    
-                    <button type="submit" id="btn-submit-todo" class="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-5 py-2.5 rounded-xl shadow-sm shadow-blue-500/10 active:scale-[0.98] transition-all whitespace-nowrap">
-                        Hinzufügen
-                    </button>
-                </div>
+                <button type="submit" id="btn-submit-todo" class="bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-950 px-4 py-1.5 text-xs font-semibold tracking-wide uppercase hover:bg-emerald-600 dark:hover:bg-emerald-500 dark:hover:text-white transition-colors">
+                    Add
+                </button>
             </div>
         </form>
 
-        <section id="panel-todos" class="space-y-3">
-            <ul id="todo-list" class="space-y-2.5"></ul>
+        <section id="panel-todos">
+            <ul id="todo-list" class="divide-y divide-slate-200 dark:divide-slate-800/60 border-t border-b border-slate-200 dark:border-slate-800/60"></ul>
             
-            <div id="empty-state" class="hidden text-center py-16 text-slate-400 dark:text-slate-600 border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-2xl">
-                <p class="text-base font-medium text-slate-600 dark:text-slate-400">Alles erledigt! 🎉</p>
-                <p class="text-xs mt-1">Keine anstehenden Aufgaben in diesem Bereich.</p>
+            <div id="empty-state" class="hidden text-center py-16 text-slate-400 dark:text-slate-600">
+                <p class="text-sm font-mono">no_tasks_found.exe</p>
             </div>
         </section>
     </main>
 
-    <div id="login-modal" class="hidden fixed inset-0 bg-slate-950/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-        <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xl max-w-sm w-full p-6 relative transition-colors duration-200" id="modal-card">
-            <h2 class="text-lg font-bold mb-1">Workspace Login</h2>
-            <p class="text-xs text-slate-400 dark:text-slate-500 mb-5">Erstelle einen Account oder melde dich an, um private Listen zu führen.</p>
+    <div id="login-modal" class="hidden fixed inset-0 bg-slate-950/40 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+        <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 max-w-sm w-full p-6 relative shadow-2xl" id="modal-card">
+            <h2 class="text-sm font-bold uppercase tracking-wider mb-4">Authentifizierung</h2>
             <form id="login-form" class="space-y-4">
                 <div>
-                    <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">E-Mail-Adresse</label>
-                    <input type="email" id="auth-email" required class="w-full px-4 py-2 bg-slate-50 border border-slate-200 dark:bg-slate-950 dark:border-slate-800 rounded-xl text-sm">
+                    <label class="block text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-1">E-Mail</label>
+                    <input type="email" id="auth-email" required class="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-sm outline-none focus:border-emerald-500">
                 </div>
                 <div>
-                    <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Passwort</label>
-                    <input type="password" id="auth-password" required minlength="6" class="w-full px-4 py-2 bg-slate-50 border border-slate-200 dark:bg-slate-950 dark:border-slate-800 rounded-xl text-sm">
+                    <label class="block text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-1">Passwort</label>
+                    <input type="password" id="auth-password" required minlength="6" class="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-sm outline-none focus:border-emerald-500">
                 </div>
                 <div class="flex gap-2 pt-2">
-                    <button type="button" id="btn-close-modal" class="flex-1 px-4 py-2 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 rounded-xl text-sm hover:bg-slate-50 dark:hover:bg-slate-800">Abbrechen</button>
-                    <button type="submit" id="btn-submit-auth" class="flex-1 px-4 py-2 bg-blue-600 text-white rounded-xl text-sm font-medium hover:bg-blue-700">Bestätigen</button>
+                    <button type="button" id="btn-close-modal" class="flex-1 px-3 py-2 border border-slate-200 dark:border-slate-800 text-xs font-semibold uppercase hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-400">Abbrechen</button>
+                    <button type="submit" id="btn-submit-auth" class="flex-1 px-3 py-2 bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-950 text-xs font-bold uppercase hover:bg-emerald-600 dark:hover:bg-emerald-500 dark:hover:text-white">Login</button>
                 </div>
             </form>
         </div>
     </div>
 
-    <footer class="bg-white dark:bg-slate-950 border-t border-slate-200 dark:border-slate-900 py-6 text-center text-xs text-slate-400 dark:text-slate-600 transition-colors duration-200">
-        <p>&copy; 2026 ClassTask. Engine live.</p>
+    <footer class="bg-white dark:bg-slate-950 border-t border-slate-100 dark:border-slate-900 py-8 text-center text-xs font-mono text-slate-400 dark:text-slate-600">
+        <div class="max-w-4xl mx-auto px-6">
+            <p>© 2026 ClassTask. Published with Minimalist Engine.</p>
+        </div>
     </footer>
 
     <script>
@@ -162,7 +161,6 @@
             fetchTodos();
         }
 
-        // Darkmode Umschalt-Logik
         themeToggle.addEventListener('click', () => {
             if (document.documentElement.classList.contains('dark')) {
                 document.documentElement.classList.remove('dark');
@@ -177,8 +175,8 @@
             user = userData;
             if (user) {
                 authStatus.innerHTML = `
-                    <span class="text-xs text-slate-400 dark:text-slate-500 hidden sm:inline" translate="no">${user.email}</span>
-                    <button id="btn-logout" class="text-xs font-semibold text-red-600 dark:text-red-400 border border-red-200 dark:border-red-950/60 hover:bg-red-50 dark:hover:bg-red-950/20 px-3 py-1.5 rounded-xl transition-all">Logout</button>
+                    <span class="text-xs font-mono text-slate-400 mr-4 hidden sm:inline">${user.email}</span>
+                    <button id="btn-logout" class="text-xs font-semibold text-red-500 hover:text-red-600 uppercase tracking-wider">Sign Out</button>
                 `;
                 document.getElementById('btn-logout').addEventListener('click', async () => {
                     await supabaseClient.auth.signOut();
@@ -186,7 +184,7 @@
                 });
             } else {
                 authStatus.innerHTML = `
-                    <button id="btn-open-login" class="text-sm font-medium bg-slate-900 text-white hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-slate-200 px-4 py-1.5 rounded-xl transition-all">Anmelden</button>
+                    <button id="btn-open-login" class="text-xs font-medium border border-slate-900 dark:border-slate-100 px-3 py-1.5 hover:bg-slate-900 hover:text-white dark:hover:bg-slate-100 dark:hover:text-slate-950 transition-all">Anmelden</button>
                 `;
                 document.getElementById('btn-open-login').addEventListener('click', () => loginModal.classList.remove('hidden'));
             }
@@ -203,7 +201,7 @@
                 query = query.eq('is_public', true);
             } else {
                 if (!user) {
-                    todoList.innerHTML = `<li class="text-center py-8 text-sm text-slate-400 dark:text-slate-600">Bitte melde dich an, um deine privaten ToDos zu sehen.</li>`;
+                    todoList.innerHTML = `<li class="text-center py-12 text-xs font-mono text-slate-400">auth_required: please sign in</li>`;
                     emptyState.classList.add('hidden');
                     return;
                 }
@@ -213,7 +211,7 @@
             const { data, error } = await query.order('created_at', { ascending: false });
 
             if (error) {
-                showError("Fehler beim Laden: " + error.message);
+                showError("Error query: " + error.message);
                 return;
             }
 
@@ -232,40 +230,36 @@
 
             todos.forEach(todo => {
                 const li = document.createElement('li');
-                li.className = "flex items-center justify-between p-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800/80 rounded-xl shadow-sm hover:border-slate-300 dark:hover:border-slate-700 transition-all group";
+                li.className = "flex items-center justify-between py-3.5 px-2 hover:bg-slate-50/60 dark:hover:bg-slate-900/40 transition-colors group";
                 
                 const isChecked = todo.is_completed ? 'checked' : '';
-                const textStyle = todo.is_completed ? 'line-through text-slate-400 dark:text-slate-600 font-normal' : 'text-slate-800 dark:text-slate-200 font-medium';
+                const textStyle = todo.is_completed ? 'line-through text-slate-400 dark:text-slate-600 font-normal' : 'text-slate-800 dark:text-slate-200 font-normal';
 
-                // Deadline Badge erstellen, falls ein Datum existiert
                 let deadlineBadge = '';
                 if (todo.deadline && !todo.is_completed) {
                     const deadlineDate = new Date(todo.deadline);
                     const today = new Date();
                     today.setHours(0,0,0,0);
+                    const daysDiff = Math.ceil((deadlineDate - today) / (1000 * 60 * 60 * 24));
                     
-                    const timeDiff = deadlineDate - today;
-                    const daysDiff = Math.ceil(timeDiff / (1000 * 60 * 60 * 24));
-                    
-                    let badgeColor = "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400";
-                    if (daysDiff <= 2) badgeColor = "bg-red-50 text-red-600 dark:bg-red-950/30 dark:text-red-400 font-semibold";
-                    else if (daysDiff <= 5) badgeColor = "bg-amber-50 text-amber-600 dark:bg-amber-950/30 dark:text-amber-400 font-semibold";
+                    let textColor = "text-slate-400 dark:text-slate-500";
+                    if (daysDiff <= 2) textColor = "text-red-500 dark:text-red-400 font-medium";
+                    else if (daysDiff <= 5) textColor = "text-amber-500 dark:text-amber-400 font-medium";
 
-                    // Formatiere das Datum leserlich (TT.MM.JJJJ)
-                    const formattedDate = deadlineDate.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' });
-                    deadlineBadge = `<span class="text-xs px-2 py-1 rounded-md tabular-numbers ${badgeColor}">📅 ${formattedDate}</span>`;
+                    const formattedDate = deadlineDate.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit' });
+                    deadlineBadge = `<span class="text-xs font-mono tabular-numbers ${textColor}">[${formattedDate}]</span>`;
                 }
 
                 li.innerHTML = `
-                    <div class="flex items-center gap-3.5 flex-grow mr-2 min-w-0">
-                        <input type="checkbox" ${isChecked} data-id="${todo.id}" class="todo-toggle w-5 h-5 rounded-lg border-slate-300 dark:border-slate-700 text-blue-600 focus:ring-blue-500 bg-slate-50 dark:bg-slate-950 cursor-pointer transition-all">
-                        <div class="flex flex-col sm:flex-row sm:items-center gap-1.5 sm:gap-3 min-w-0 flex-grow">
+                    <div class="flex items-center gap-4 flex-grow mr-2 min-w-0">
+                        <input type="checkbox" ${isChecked} data-id="${todo.id}" class="todo-toggle w-4 h-4 rounded-none border-slate-300 dark:border-slate-700 text-emerald-500 focus:ring-0 bg-transparent cursor-pointer transition-all">
+                        <div class="flex items-center gap-3 min-w-0 flex-grow">
                             <span class="${textStyle} text-sm truncate">${escapeHTML(todo.title)}</span>
                             <div class="shrink-0">${deadlineBadge}</div>
                         </div>
                     </div>
-                    <button data-id="${todo.id}" class="todo-delete text-slate-300 dark:text-slate-700 hover:text-red-500 dark:hover:text-red-400 p-1.5 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800/60 opacity-100 sm:opacity-0 group-hover:opacity-100 transition-all" aria-label="Aufgabe löschen">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                    <button data-id="${todo.id}" class="todo-delete text-slate-300 dark:text-slate-700 hover:text-red-500 dark:hover:text-red-400 p-1 opacity-100 sm:opacity-0 group-hover:opacity-100 transition-opacity" aria-label="Delete">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
                     </button>
                 `;
                 todoList.appendChild(li);
@@ -276,35 +270,22 @@
             e.preventDefault();
             const btn = document.getElementById('btn-submit-todo');
             const title = todoInput.value.trim();
-            const deadline = todoDeadline.value || null; // Fängt leere Deadlines ab
+            const deadline = todoDeadline.value || null;
             if (!title || !supabaseClient) return;
 
             btn.disabled = true;
             btn.innerText = "…";
 
             const isPublic = (currentTab === 'public');
-            const payload = { 
-                title: title, 
-                is_public: isPublic,
-                deadline: deadline
-            };
-            
-            if (user && user.id) {
-                payload.user_id = user.id;
-            }
+            const payload = { title: title, is_public: isPublic, deadline: deadline };
+            if (user && user.id) payload.user_id = user.id;
 
             const { error } = await supabaseClient.from('todos').insert([payload]);
-            
             btn.disabled = false;
-            btn.innerText = "Hinzufügen";
+            btn.innerText = "Add";
 
-            if (error) {
-                showError("Fehler beim Hinzufügen: " + error.message);
-            } else { 
-                todoInput.value = ''; 
-                todoDeadline.value = '';
-                fetchTodos(); 
-            }
+            if (error) showError("Insert failed: " + error.message);
+            else { todoInput.value = ''; todoDeadline.value = ''; fetchTodos(); }
         });
 
         todoList.addEventListener('click', async (e) => {
@@ -345,13 +326,13 @@
         function switchTab(tab) {
             currentTab = tab;
             if (tab === 'public') {
-                tabPublic.className = "flex-1 py-2.5 text-center text-sm font-medium rounded-lg bg-white dark:bg-slate-800 text-blue-600 dark:text-blue-400 shadow-sm transition-all duration-200";
-                tabPrivate.className = "flex-1 py-2.5 text-center text-sm font-medium rounded-lg text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 transition-all duration-200";
-                todoInput.placeholder = "Neue Aufgabe für die Klasse hinzufügen…";
+                tabPublic.className = "pb-3 pr-6 text-sm font-semibold border-b-2 border-emerald-500 text-slate-950 dark:text-white transition-all";
+                tabPrivate.className = "pb-3 px-6 text-sm font-medium border-b-2 border-transparent text-slate-400 dark:text-slate-500 hover:text-slate-950 dark:hover:text-white transition-all";
+                todoInput.placeholder = "Neue Aufgabe eintragen...";
             } else {
-                tabPrivate.className = "flex-1 py-2.5 text-center text-sm font-medium rounded-lg bg-white dark:bg-slate-800 text-blue-600 dark:text-blue-400 shadow-sm transition-all duration-200";
-                tabPublic.className = "flex-1 py-2.5 text-center text-sm font-medium rounded-lg text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 transition-all duration-200";
-                todoInput.placeholder = "Persönliche, private Aufgabe hinzufügen…";
+                tabPrivate.className = "pb-3 px-6 text-sm font-semibold border-b-2 border-emerald-500 text-slate-950 dark:text-white transition-all";
+                tabPublic.className = "pb-3 pr-6 text-sm font-medium border-b-2 border-transparent text-slate-400 dark:text-slate-500 hover:text-slate-950 dark:hover:text-white transition-all";
+                todoInput.placeholder = "Private Aufgabe eintragen...";
             }
             fetchTodos();
         }
@@ -360,19 +341,15 @@
             if (!supabaseClient) return;
             try {
                 const { count: pubCount } = await supabaseClient.from('todos').select('*', { count: 'exact', head: true }).eq('is_public', true);
-                document.getElementById('count-public').innerText = pubCount || 0;
+                document.getElementById('count-public').innerText = `(${pubCount || 0})`;
                 if (user) {
                     const { count: privCount } = await supabaseClient.from('todos').select('*', { count: 'exact', head: true }).eq('is_public', false).eq('user_id', user.id);
-                    document.getElementById('count-private').innerText = privCount || 0;
-                } else document.getElementById('count-private').innerText = '0';
+                    document.getElementById('count-private').innerText = `(${privCount || 0})`;
+                } else document.getElementById('count-private').innerText = '(0)';
             } catch(e) {}
         }
 
-        function showError(msg) { 
-            const toast = document.getElementById('error-toast'); 
-            document.getElementById('error-message').innerText = msg; 
-            toast.classList.remove('hidden'); 
-        }
+        function showError(msg) { const toast = document.getElementById('error-toast'); document.getElementById('error-message').innerText = msg; toast.classList.remove('hidden'); }
         function escapeHTML(str) { return str ? str.replace(/[&<>'"]/g, t => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[t] || t)) : ''; }
 
         document.addEventListener('DOMContentLoaded', startInitialization);
