@@ -21,7 +21,7 @@
                 <span class="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded font-medium">v1.0</span>
             </div>
             <div id="auth-status" class="flex items-center gap-3">
-                <button id="btn-open-login" class="text-sm font-medium bg-slate-900 text-white hover:bg-slate-800 px-4 py-1.5 rounded-lg shadow-sm fade-transition">Anmelden</button>
+                <button id="btn-open-login" class="text-sm font-medium bg-slate-900 text-white hover:bg-slate-800 px-4 py-1.5 rounded-lg shadow-sm">Anmelden</button>
             </div>
         </div>
     </header>
@@ -29,22 +29,23 @@
     <main id="main-content" class="flex-grow max-w-4xl w-full mx-auto px-4 py-8">
         
         <div class="flex border-b border-slate-200 mb-6" role="tablist">
-            <button id="tab-public" class="flex-1 py-3 text-center font-medium border-b-2 border-blue-600 text-blue-600 fade-transition">
+            <button id="tab-public" class="flex-1 py-3 text-center font-medium border-b-2 border-blue-600 text-blue-600">
                 👥 Klassen-ToDos <span id="count-public" class="ml-1 text-xs bg-blue-50 px-2 py-0.5 rounded-full tabular-numbers">0</span>
             </button>
-            <button id="tab-private" class="flex-1 py-3 text-center font-medium border-b-2 border-transparent text-slate-500 hover:text-slate-800 hover:border-slate-300 fade-transition">
+            <button id="tab-private" class="flex-1 py-3 text-center font-medium border-b-2 border-transparent text-slate-500 hover:text-slate-800">
                 🔒 Meine Aufgaben <span id="count-private" class="ml-1 text-xs bg-slate-100 px-2 py-0.5 rounded-full tabular-numbers">0</span>
             </button>
         </div>
 
-        <div id="error-toast" class="hidden mb-4 p-4 bg-red-50 border border-red-200 text-red-700 rounded-lg flex items-center gap-2" role="alert">
-            <span class="font-bold">Fehler:</span> <span id="error-message"></span>
+        <div id="error-toast" class="hidden mb-4 p-4 bg-red-50 border border-red-200 text-red-700 rounded-lg flex flex-col gap-1" role="alert">
+            <span class="font-bold">Datenbank-Fehlermeldung:</span>
+            <span id="error-message" class="font-mono text-sm break-all"></span>
         </div>
 
         <form id="todo-form" class="mb-6 flex gap-2">
             <input type="text" id="todo-input" required minlength="2" placeholder="Neue Aufgabe für die Klasse hinzufügen…" 
                    class="flex-grow px-4 py-2.5 bg-white border border-slate-300 rounded-lg shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-base">
-            <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white font-medium px-5 py-2.5 rounded-lg shadow-sm fade-transition">
+            <button type="submit" id="btn-submit-todo" class="bg-blue-600 hover:bg-blue-700 text-white font-medium px-5 py-2.5 rounded-lg shadow-sm transition-all">
                 Hinzufügen
             </button>
         </form>
@@ -59,8 +60,8 @@
     </main>
 
     <div id="login-modal" class="hidden fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-        <div class="bg-white rounded-xl shadow-xl max-w-md w-full p-6 relative fade-transition" id="modal-card">
-            <h2 id="modal-title" class="text-xl font-bold mb-4">Anmelden / Registrieren</h2>
+        <div class="bg-white rounded-xl shadow-xl max-w-md w-full p-6 relative" id="modal-card">
+            <h2 class="text-xl font-bold mb-4">Anmelden / Registrieren</h2>
             <form id="login-form" class="space-y-4">
                 <div>
                     <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">E-Mail-Adresse</label>
@@ -86,6 +87,7 @@
         const SUPABASE_URL = "https://tlsrphqvnpvjaansofps.supabase.co";
         const SUPABASE_ANON_KEY = "sb_publishable_MHgFfuEb1Z8_Yq4vqfS2lg_QSvbeOUG";
         
+        // Verwende den korrekten globalen Key, falls das Skript asynchron lädt
         const supabase = window.supabase ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
 
         let currentTab = 'public'; 
@@ -101,16 +103,19 @@
         const authStatus = document.getElementById('auth-status');
         const loginModal = document.getElementById('login-modal');
         const loginForm = document.getElementById('login-form');
-        const modalCard = document.getElementById('modal-card');
 
         async function init() {
             setupEventListeners();
             if(!supabase) {
-                showError("Supabase konnte nicht geladen werden.");
+                showError("Der Supabase-Client wurde nicht korrekt initialisiert. Überprüfe die Skript-Quelle.");
                 return;
             }
-            const { data: { session } } = await supabase.auth.getSession();
-            updateUser(session?.user ?? null);
+            try {
+                const { data: { session } } = await supabase.auth.getSession();
+                updateUser(session?.user ?? null);
+            } catch(e) {
+                console.log("Keine aktive Session gefunden.");
+            }
             fetchTodos();
         }
 
@@ -129,16 +134,15 @@
                 authStatus.innerHTML = `
                     <button id="btn-open-login" class="text-sm font-medium bg-slate-900 text-white hover:bg-slate-800 px-4 py-1.5 rounded-lg shadow-sm">Anmelden</button>
                 `;
-                document.getElementById('btn-open-login').addEventListener('click', openModal);
+                document.getElementById('btn-open-login').addEventListener('click', () => loginModal.classList.remove('hidden'));
             }
             updateCounts();
         }
 
         async function fetchTodos() {
             if(!supabase) return;
-            todoList.innerHTML = '';
-            emptyState.classList.add('hidden');
-
+            document.getElementById('error-toast').classList.add('hidden');
+            
             let query = supabase.from('todos').select('*');
 
             if (currentTab === 'public') {
@@ -146,6 +150,7 @@
             } else {
                 if (!user) {
                     todoList.innerHTML = `<li class="text-center py-6 text-slate-500">Bitte melde dich an, um deine privaten ToDos zu sehen.</li>`;
+                    emptyState.classList.add('hidden');
                     return;
                 }
                 query = query.eq('is_public', false).eq('user_id', user.id);
@@ -154,8 +159,7 @@
             const { data, error } = await query.order('created_at', { ascending: false });
 
             if (error) {
-                showError(error.message);
-                emptyState.classList.remove('hidden');
+                showError("Fehler beim Laden der Aufgaben: " + error.message + " (Code: " + error.code + ")");
                 return;
             }
 
@@ -170,6 +174,7 @@
                 emptyState.classList.remove('hidden');
                 return;
             }
+            emptyState.classList.add('hidden');
 
             todos.forEach(todo => {
                 const li = document.createElement('li');
@@ -192,28 +197,46 @@
 
         todoForm.addEventListener('submit', async (e) => {
             e.preventDefault();
+            const btn = document.getElementById('btn-submit-todo');
             const title = todoInput.value.trim();
             if (!title || !supabase) return;
 
+            btn.disabled = true;
+            btn.innerText = "Speichert…";
+
             const isPublic = (currentTab === 'public');
-            const payload = { title: title, is_public: isPublic, user_id: user ? user.id : null };
+            const payload = { 
+                title: title, 
+                is_public: isPublic, 
+                user_id: user ? user.id : null 
+            };
 
             const { error } = await supabase.from('todos').insert([payload]);
-            if (error) showError(error.message);
-            else { todoInput.value = ''; fetchTodos(); }
+            
+            btn.disabled = false;
+            btn.innerText = "Hinzufügen";
+
+            if (error) {
+                showError("Fehler beim Hinzufügen: " + error.message + " | Details: " + error.details + " (Code: " + error.code + ")");
+            } else { 
+                todoInput.value = ''; 
+                fetchTodos(); 
+            }
         });
 
         todoList.addEventListener('click', async (e) => {
             const target = e.target;
             if (target.classList.contains('todo-toggle')) {
                 const id = target.getAttribute('data-id');
-                await supabase.from('todos').update({ is_completed: target.checked }).eq('id', id);
-                fetchTodos();
+                const { error } = await supabase.from('todos').update({ is_completed: target.checked }).eq('id', id);
+                if (error) showError(error.message);
+                else fetchTodos();
             }
             if (target.closest('.todo-delete')) {
                 const id = target.closest('.todo-delete').getAttribute('data-id');
-                await supabase.from('todos').delete().eq('id', id);
-                fetchTodos();
+                const { error } = await supabase.from('todos').delete().eq('id', id);
+                if (error) showError(error.message);
+                else fetchTodos();
             }
         });
 
@@ -242,11 +265,11 @@
             currentTab = tab;
             if (tab === 'public') {
                 tabPublic.className = "flex-1 py-3 text-center font-medium border-b-2 border-blue-600 text-blue-600";
-                tabPrivate.className = "flex-1 py-3 text-center font-medium border-b-2 border-transparent text-slate-500";
+                tabPrivate.className = "flex-1 py-3 text-center font-medium border-b-2 border-transparent text-slate-500 hover:text-slate-800";
                 todoInput.placeholder = "Neue Aufgabe für die Klasse hinzufügen…";
             } else {
                 tabPrivate.className = "flex-1 py-3 text-center font-medium border-b-2 border-blue-600 text-blue-600";
-                tabPublic.className = "flex-1 py-3 text-center font-medium border-b-2 border-transparent text-slate-500";
+                tabPublic.className = "flex-1 py-3 text-center font-medium border-b-2 border-transparent text-slate-500 hover:text-slate-800";
                 todoInput.placeholder = "Persönliche, private Aufgabe hinzufügen…";
             }
             fetchTodos();
@@ -254,16 +277,21 @@
 
         async function updateCounts() {
             if (!supabase) return;
-            const { count: pubCount } = await supabase.from('todos').select('*', { count: 'exact', head: true }).or('is_public.eq.true,is_public.is.null');
-            document.getElementById('count-public').innerText = pubCount || 0;
-            if (user) {
-                const { count: privCount } = await supabase.from('todos').select('*', { count: 'exact', head: true }).eq('is_public', false).eq('user_id', user.id);
-                document.getElementById('count-private').innerText = privCount || 0;
-            } else document.getElementById('count-private').innerText = '0';
+            try {
+                const { count: pubCount } = await supabase.from('todos').select('*', { count: 'exact', head: true }).or('is_public.eq.true,is_public.is.null');
+                document.getElementById('count-public').innerText = pubCount || 0;
+                if (user) {
+                    const { count: privCount } = await supabase.from('todos').select('*', { count: 'exact', head: true }).eq('is_public', false).eq('user_id', user.id);
+                    document.getElementById('count-private').innerText = privCount || 0;
+                } else document.getElementById('count-private').innerText = '0';
+            } catch(e) {}
         }
 
-        function openModal() { loginModal.classList.remove('hidden'); document.getElementById('auth-email').focus(); }
-        function showError(msg) { const toast = document.getElementById('error-toast'); document.getElementById('error-message').innerText = msg; toast.classList.remove('hidden'); }
+        function showError(msg) { 
+            const toast = document.getElementById('error-toast'); 
+            document.getElementById('error-message').innerText = msg; 
+            toast.classList.remove('hidden'); 
+        }
         function escapeHTML(str) { return str ? str.replace(/[&<>'"]/g, t => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[t] || t)) : ''; }
 
         document.addEventListener('DOMContentLoaded', init);
