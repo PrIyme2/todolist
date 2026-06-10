@@ -38,7 +38,7 @@
                 <span class="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded font-medium">v1.0</span>
             </div>
             <div id="auth-status" class="flex items-center gap-3">
-                <div class="h-8 w-24 bg-slate-200 animate-pulse rounded-md" aria-hidden="true"></div>
+                <button id="btn-open-login" class="text-sm font-medium bg-slate-900 text-white hover:bg-slate-800 px-4 py-1.5 rounded-lg shadow-sm fade-transition">Anmelden</button>
             </div>
         </div>
     </header>
@@ -108,7 +108,6 @@
     </footer>
 
     <script>
-        // ECHTE KEYS DIREKT INTEGRIERT
         const SUPABASE_URL = "https://tlsrphqvnpvjaansofps.supabase.co";
         const SUPABASE_ANON_KEY = "sb_publishable_MHgFfuEb1Z8_Yq4vqfS2lg_QSvbeOUG";
         
@@ -133,21 +132,21 @@
         async function init() {
             setupEventListeners();
             if(!supabase) {
-                showError("Supabase konnte nicht geladen werden.");
+                showError("Supabase-Verbindung fehlgeschlagen.");
                 todoSkeleton.classList.add('hidden');
                 return;
             }
             
-            const { data: { session } } = await supabase.auth.getSession();
-            updateUser(session?.user ?? null);
+            try {
+                const { data: { session }, error } = await supabase.auth.getSession();
+                if (error) throw error;
+                updateUser(session?.user ?? null);
+            } catch (err) {
+                console.error("Auth Error:", err);
+                updateUser(null);
+            }
 
-            supabase
-                .channel('schema-db-changes')
-                .on('postgres_changes', { event: '*', filter: 'is_public=eq.true', schema: 'public', table: 'todos' }, () => {
-                    if (currentTab === 'public') fetchTodos();
-                })
-                .subscribe();
-
+            // Realtime deaktiviert, um initiale Fehlerquellen zu minimieren
             fetchTodos();
         }
 
@@ -158,7 +157,10 @@
                     <span class="text-sm text-slate-600 hidden sm:inline" translate="no">${user.email}</span>
                     <button id="btn-logout" class="text-sm font-medium text-red-600 hover:text-red-700 border border-red-200 hover:bg-red-50 px-3 py-1.5 rounded-lg fade-transition">Abmelden</button>
                 `;
-                document.getElementById('btn-logout').addEventListener('click', () => supabase.auth.signOut());
+                document.getElementById('btn-logout').addEventListener('click', async () => {
+                    await supabase.auth.signOut();
+                    window.location.reload();
+                });
             } else {
                 authStatus.innerHTML = `
                     <button id="btn-open-login" class="text-sm font-medium bg-slate-900 text-white hover:bg-slate-800 px-4 py-1.5 rounded-lg shadow-sm fade-transition">Anmelden</button>
@@ -177,7 +179,7 @@
             let query = supabase.from('todos').select('*');
 
             if (currentTab === 'public') {
-                query = query.eq('is_public', true);
+                query = query.or('is_public.eq.true,is_public.is.null');
             } else {
                 if (!user) {
                     todoSkeleton.classList.add('hidden');
@@ -191,11 +193,12 @@
             todoSkeleton.classList.add('hidden');
 
             if (error) {
-                showError(error.message);
+                showError("Datenbank-Fehler: " + error.message);
+                emptyState.classList.remove('hidden');
                 return;
             }
 
-            todos = data;
+            todos = data || [];
             renderTodos();
             updateCounts();
         }
@@ -216,13 +219,10 @@
 
                 li.innerHTML = `
                     <div class="flex items-center gap-3">
-                        <input type="checkbox" ${isChecked} data-id="${todo.id}" 
-                               aria-label="Aufgabe als erledigt markieren"
-                               class="todo-toggle w-5 h-5 rounded text-blue-600 border-slate-300 focus:ring-blue-500">
+                        <input type="checkbox" ${isChecked} data-id="${todo.id}" class="todo-toggle w-5 h-5 rounded text-blue-600 border-slate-300 focus:ring-blue-500">
                         <span class="${textStyle} font-medium">${escapeHTML(todo.title)}</span>
                     </div>
-                    <button data-id="${todo.id}" aria-label="Aufgabe löschen" 
-                            class="todo-delete text-slate-400 hover:text-red-600 p-1 rounded hover:bg-slate-50 fade-transition">
+                    <button data-id="${todo.id}" class="todo-delete text-slate-400 hover:text-red-600 p-1 rounded hover:bg-slate-50 fade-transition">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
                     </button>
                 `;
@@ -236,12 +236,6 @@
             if (!title || !supabase) return;
 
             const isPublic = (currentTab === 'public');
-            
-            if (!isPublic && !user) {
-                showError("Du musst eingeloggt sein, um private ToDos zu erstellen.");
-                return;
-            }
-
             const payload = {
                 title: title,
                 is_public: isPublic,
@@ -251,7 +245,7 @@
             const { error } = await supabase.from('todos').insert([payload]);
 
             if (error) {
-                showError(error.message);
+                showError("Speichern fehlgeschlagen: " + error.message);
             } else {
                 todoInput.value = '';
                 fetchTodos();
@@ -289,10 +283,10 @@
 
             let { data, error } = await supabase.auth.signInWithPassword({ email, password });
 
-            if (error && error.message.includes("Invalid login credentials")) {
+            if (error && (error.message.includes("Invalid login credentials") || error.status === 400)) {
                 const { data: signUpData, error: signUpError } = await supabase.auth.signUp({ email, password });
                 error = signUpError;
-                if (!signUpError) alert("Account erfolgreich erstellt! Du bist jetzt eingeloggt.");
+                if (!signUpError) alert("Account registriert! Falls eine Bestätigungs-Mail gefordert wird, bitte Postfach prüfen.");
             }
 
             submitBtn.disabled = false;
@@ -302,20 +296,9 @@
                 showError(error.message);
             } else {
                 closeModal();
-                if(supabase) {
-                    const { data: { session } } = await supabase.auth.getSession();
-                    updateUser(session?.user ?? null);
-                }
-                fetchTodos();
+                window.location.reload();
             }
         });
-
-        if(supabase) {
-            supabase.auth.onAuthStateChange((event, session) => {
-                updateUser(session?.user ?? null);
-                fetchTodos();
-            });
-        }
 
         function setupEventListeners() {
             tabPublic.addEventListener('click', () => switchTab('public'));
@@ -339,7 +322,7 @@
 
         async function updateCounts() {
             if (!supabase) return;
-            const { count: pubCount } = await supabase.from('todos').select('*', { count: 'exact', head: true }).eq('is_public', true);
+            const { count: pubCount } = await supabase.from('todos').select('*', { count: 'exact', head: true }).or('is_public.eq.true,is_public.is.null');
             document.getElementById('count-public').innerText = pubCount || 0;
 
             if (user) {
@@ -361,23 +344,18 @@
 
         function closeModal() {
             modalCard.classList.remove('scale-100', 'opacity-100');
-            modalCard.classList.add('scale-95', 'opacity-0');
-            setTimeout(() => {
-                loginModal.classList.add('hidden');
-            }, 200);
+            modalCard.className = "bg-white rounded-xl shadow-xl max-w-md w-full p-6 relative fade-transition scale-95 opacity-0";
+            setTimeout(() => loginModal.classList.add('hidden'), 200);
         }
 
         function showError(message) {
             const errorToast = document.getElementById('error-toast');
             document.getElementById('error-message').innerText = message;
             errorToast.classList.remove('hidden');
-            setTimeout(() => errorToast.classList.add('hidden'), 6000);
         }
 
         function escapeHTML(str) {
-            return str.replace(/[&<>'"]/g, 
-                tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag)
-            );
+            return str ? str.replace(/[&<>'"]/g, tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag)) : '';
         }
 
         document.addEventListener('DOMContentLoaded', init);
