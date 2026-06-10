@@ -8,7 +8,6 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     
     <style>
-        /* Design-Richtlinien: Fokus-Ringe & Tabellennummern */
         *:focus-visible {
             outline: 2px solid #2563eb;
             outline-offset: 2px;
@@ -16,7 +15,6 @@
         .tabular-numbers {
             font-variant-numeric: tabular-nums;
         }
-        /* Flüssige, GPU-beschleunigte Übergänge */
         .fade-transition {
             transition: opacity 0.2s cubic-bezier(0.4, 0, 0.2, 1), transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
         }
@@ -110,19 +108,16 @@
     </footer>
 
     <script>
-        // 1. SUPABASE INITIALISIERUNG
-        // Ersetze diese beiden Werte mit deinen echten Schlüsseln aus dem Supabase-Dashboard!
-        const SUPABASE_URL = "https://DEIN_PROJEKT.supabase.co";
-        const SUPABASE_ANON_KEY = "DEIN_ANON_KEY";
+        // ECHTE KEYS DIREKT INTEGRIERT
+        const SUPABASE_URL = "https://tlsrphqvnpvjaansofps.supabase.co";
+        const SUPABASE_ANON_KEY = "sb_publishable_MHgFfuEb1Z8_Yq4vqfS2lg_QSvbeOUG";
         
         const supabase = window.supabase ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
 
-        // Statemanagement
-        let currentTab = 'public'; // 'public' oder 'private'
+        let currentTab = 'public'; 
         let user = null;
         let todos = [];
 
-        // DOM Elemente
         const tabPublic = document.getElementById('tab-public');
         const tabPrivate = document.getElementById('tab-private');
         const todoForm = document.getElementById('todo-form');
@@ -135,20 +130,17 @@
         const loginForm = document.getElementById('login-form');
         const modalCard = document.getElementById('modal-card');
 
-        // 2. INITIALISIERUNG & AUTH EVENT LISTENER
         async function init() {
             setupEventListeners();
             if(!supabase) {
-                showError("Supabase konnte nicht geladen werden. Bitte überprüfe die Keys im Code.");
+                showError("Supabase konnte nicht geladen werden.");
                 todoSkeleton.classList.add('hidden');
                 return;
             }
             
-            // Aktuellen Session-Status prüfen
             const { data: { session } } = await supabase.auth.getSession();
             updateUser(session?.user ?? null);
 
-            // Echtzeit-Updates abonnieren (Supabase Realtime)
             supabase
                 .channel('schema-db-changes')
                 .on('postgres_changes', { event: '*', filter: 'is_public=eq.true', schema: 'public', table: 'todos' }, () => {
@@ -176,7 +168,6 @@
             updateCounts();
         }
 
-        // 3. DATEN FETCHEN UND RENDERN
         async function fetchTodos() {
             if(!supabase) return;
             todoSkeleton.classList.remove('hidden');
@@ -197,7 +188,6 @@
             }
 
             const { data, error } = await query.order('created_at', { ascending: false });
-
             todoSkeleton.classList.add('hidden');
 
             if (error) {
@@ -240,7 +230,6 @@
             });
         }
 
-        // 4. CRUD OPERATIONEN
         todoForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             const title = todoInput.value.trim();
@@ -272,7 +261,6 @@
         todoList.addEventListener('click', async (e) => {
             const target = e.target;
             
-            // Checkbox Klick (Status ändern)
             if (target.classList.contains('todo-toggle')) {
                 const id = target.getAttribute('data-id');
                 const isCompleted = target.checked;
@@ -281,7 +269,6 @@
                 else fetchTodos();
             }
 
-            // Löschen Klick
             if (target.closest('.todo-delete')) {
                 const btn = target.closest('.todo-delete');
                 const id = btn.getAttribute('data-id');
@@ -291,7 +278,6 @@
             }
         });
 
-        // 5. AUTH LOGIK (LOGIN / REGISTRIERUNG)
         loginForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             const email = document.getElementById('auth-email').value;
@@ -301,11 +287,9 @@
             submitBtn.disabled = true;
             submitBtn.innerText = "Verarbeite…";
 
-            // Supabase versucht sich einzuloggen. Wenn der User nicht existiert, wird er registriert
             let { data, error } = await supabase.auth.signInWithPassword({ email, password });
 
             if (error && error.message.includes("Invalid login credentials")) {
-                // Account existiert nicht -> Neu registrieren
                 const { data: signUpData, error: signUpError } = await supabase.auth.signUp({ email, password });
                 error = signUpError;
                 if (!signUpError) alert("Account erfolgreich erstellt! Du bist jetzt eingeloggt.");
@@ -333,7 +317,6 @@
             });
         }
 
-        // 6. UI & UTILITY FUNKTIONEN
         function setupEventListeners() {
             tabPublic.addEventListener('click', () => switchTab('public'));
             tabPrivate.addEventListener('click', () => switchTab('private'));
@@ -356,7 +339,6 @@
 
         async function updateCounts() {
             if (!supabase) return;
-            // Zähler für die Tabs im Hintergrund laden
             const { count: pubCount } = await supabase.from('todos').select('*', { count: 'exact', head: true }).eq('is_public', true);
             document.getElementById('count-public').innerText = pubCount || 0;
 
@@ -398,7 +380,6 @@
             );
         }
 
-        // Start!
         document.addEventListener('DOMContentLoaded', init);
     </script>
 </body>
