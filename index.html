@@ -1,85 +1,126 @@
 <!DOCTYPE html>
-<html lang="de">
+<html lang="de" class="scroll-smooth">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title translate="no">ClassTask … Die ToDo-App für deine Klasse</title>
+    <title translate="no">ClassTask … Workspace</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
+    <script>
+        // Tailwind Konfiguration für erweiterten Darkmode & Schriften
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
+                    }
+                }
+            }
+        }
+
+        // Darkmode Initialisierung (System-Präferenz oder Speicher)
+        if (localStorage.getItem('theme') === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            document.documentElement.classList.add('dark');
+        } else {
+            document.documentElement.classList.remove('dark');
+        }
+    </script>
+
     <style>
-        *:focus-visible { outline: 2px solid #2563eb; outline-offset: 2px; }
+        *:focus-visible { outline: 2px solid #3b82f6; outline-offset: 2px; }
         .tabular-numbers { font-variant-numeric: tabular-nums; }
+        /* Versteckt die Standard-Checkbox-Ästhetik für ein cleanes Custom-Design */
+        .custom-checkbox:checked + span { text-decoration: line-through; opacity: 0.5; }
     </style>
 </head>
-<body class="bg-slate-50 text-slate-900 font-sans antialiased min-h-screen flex flex-col">
+<body class="bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100 font-sans antialiased min-h-screen flex flex-col transition-colors duration-200">
 
-    <header class="bg-white border-b border-slate-200 sticky top-0 z-40">
+    <header class="bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 sticky top-0 z-40 transition-colors duration-200">
         <div class="max-w-4xl mx-auto px-4 h-16 flex items-center justify-between">
-            <div class="flex items-center gap-2">
-                <span class="text-xl font-bold tracking-tight text-blue-600" translate="no">ClassTask</span>
-                <span class="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded font-medium">v1.0</span>
+            <div class="flex items-center gap-3">
+                <span class="text-xl font-bold tracking-tight bg-gradient-to-r from-blue-600 to-indigo-500 bg-clip-text text-transparent" translate="no">ClassTask</span>
+                <span class="text-[10px] bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400 px-2 py-0.5 rounded-full font-semibold tracking-wider uppercase">Pro</span>
             </div>
-            <div id="auth-status" class="flex items-center gap-3">
-                <button id="btn-open-login" class="text-sm font-medium bg-slate-900 text-white hover:bg-slate-800 px-4 py-1.5 rounded-lg shadow-sm">Anmelden</button>
+            
+            <div class="flex items-center gap-4">
+                <button id="theme-toggle" aria-label="Farbschema wechseln" class="p-2 text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-100 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-all">
+                    <svg id="theme-toggle-sun" class="w-5 h-5 hidden dark:block" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364-6.364l-.707.707M6.343 17.657l-.707.707m12.728 0l-.707-.707M6.343 6.364l-.707-.707M12 8a4 4 0 100 8 4 4 0 000-8z"></path></svg>
+                    <svg id="theme-toggle-moon" class="w-5 h-5 block dark:hidden" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path></svg>
+                </button>
+
+                <div id="auth-status" class="flex items-center gap-3">
+                    <button id="btn-open-login" class="text-sm font-medium bg-slate-900 text-white hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-slate-200 px-4 py-2 rounded-xl shadow-sm transition-all">Anmelden</button>
+                </div>
             </div>
         </div>
     </header>
 
-    <main id="main-content" class="flex-grow max-w-4xl w-full mx-auto px-4 py-8">
+    <main id="main-content" class="flex-grow max-w-3xl w-full mx-auto px-4 py-8">
         
-        <div class="flex border-b border-slate-200 mb-6" role="tablist">
-            <button id="tab-public" class="flex-1 py-3 text-center font-medium border-b-2 border-blue-600 text-blue-600">
-                👥 Klassen-ToDos <span id="count-public" class="ml-1 text-xs bg-blue-50 px-2 py-0.5 rounded-full tabular-numbers">0</span>
+        <div class="flex p-1 bg-slate-200/60 dark:bg-slate-900 rounded-xl mb-8" role="tablist">
+            <button id="tab-public" class="flex-1 py-2.5 text-center text-sm font-medium rounded-lg bg-white dark:bg-slate-800 text-blue-600 dark:text-blue-400 shadow-sm transition-all duration-200">
+                👥 Klassen-ToDos <span id="count-public" class="ml-1 text-xs bg-blue-50 dark:bg-blue-950/50 px-2 py-0.5 rounded-full tabular-numbers">0</span>
             </button>
-            <button id="tab-private" class="flex-1 py-3 text-center font-medium border-b-2 border-transparent text-slate-500 hover:text-slate-800">
-                🔒 Meine Aufgaben <span id="count-private" class="ml-1 text-xs bg-slate-100 px-2 py-0.5 rounded-full tabular-numbers">0</span>
+            <button id="tab-private" class="flex-1 py-2.5 text-center text-sm font-medium rounded-lg text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 transition-all duration-200">
+                🔒 Meine Aufgaben <span id="count-private" class="ml-1 text-xs bg-slate-300/40 dark:bg-slate-800 px-2 py-0.5 rounded-full tabular-numbers">0</span>
             </button>
         </div>
 
-        <div id="error-toast" class="hidden mb-4 p-4 bg-red-50 border border-red-200 text-red-700 rounded-lg flex flex-col gap-1" role="alert">
-            <span class="font-bold">Meldung:</span>
-            <span id="error-message" class="font-mono text-sm break-all"></span>
+        <div id="error-toast" class="hidden mb-6 p-4 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900/50 text-red-700 dark:text-red-400 rounded-xl text-sm font-mono break-all" role="alert">
+            <span id="error-message"></span>
         </div>
 
-        <form id="todo-form" class="mb-6 flex gap-2">
-            <input type="text" id="todo-input" required minlength="2" placeholder="Neue Aufgabe für die Klasse hinzufügen…" 
-                   class="flex-grow px-4 py-2.5 bg-white border border-slate-300 rounded-lg shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-base">
-            <button type="submit" id="btn-submit-todo" class="bg-blue-600 hover:bg-blue-700 text-white font-medium px-5 py-2.5 rounded-lg shadow-sm">
-                Hinzufügen
-            </button>
+        <form id="todo-form" class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-4 rounded-2xl shadow-sm space-y-3 mb-8 transition-colors duration-200">
+            <div class="flex flex-col md:flex-row gap-3">
+                <input type="text" id="todo-input" required minlength="2" placeholder="Neue Aufgabe für die Klasse hinzufügen…" 
+                       class="flex-grow px-4 py-2.5 bg-slate-50 border border-slate-200 dark:bg-slate-950 dark:border-slate-800 rounded-xl focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-sm transition-all">
+                
+                <div class="flex gap-2">
+                    <input type="date" id="todo-deadline" aria-label="Deadline festlegen"
+                           class="px-3 py-2.5 bg-slate-50 border border-slate-200 dark:bg-slate-950 dark:border-slate-800 rounded-xl text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-slate-500 dark:text-slate-400 transition-all">
+                    
+                    <button type="submit" id="btn-submit-todo" class="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-5 py-2.5 rounded-xl shadow-sm shadow-blue-500/10 active:scale-[0.98] transition-all whitespace-nowrap">
+                        Hinzufügen
+                    </button>
+                </div>
+            </div>
         </form>
 
-        <section id="panel-todos" class="space-y-2">
-            <ul id="todo-list" class="space-y-2"></ul>
-            <div id="empty-state" class="hidden text-center py-12 text-slate-400 border-2 border-dashed border-slate-200 rounded-lg">
-                <p class="text-lg font-medium">Alles erledigt! 🎉</p>
-                <p class="text-sm">Füge oben eine neue Aufgabe hinzu.</p>
+        <section id="panel-todos" class="space-y-3">
+            <ul id="todo-list" class="space-y-2.5"></ul>
+            
+            <div id="empty-state" class="hidden text-center py-16 text-slate-400 dark:text-slate-600 border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-2xl">
+                <p class="text-base font-medium text-slate-600 dark:text-slate-400">Alles erledigt! 🎉</p>
+                <p class="text-xs mt-1">Keine anstehenden Aufgaben in diesem Bereich.</p>
             </div>
         </section>
     </main>
 
-    <div id="login-modal" class="hidden fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-        <div class="bg-white rounded-xl shadow-xl max-w-md w-full p-6 relative" id="modal-card">
-            <h2 class="text-xl font-bold mb-4">Anmelden / Registrieren</h2>
+    <div id="login-modal" class="hidden fixed inset-0 bg-slate-950/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xl max-w-sm w-full p-6 relative transition-colors duration-200" id="modal-card">
+            <h2 class="text-lg font-bold mb-1">Workspace Login</h2>
+            <p class="text-xs text-slate-400 dark:text-slate-500 mb-5">Erstelle einen Account oder melde dich an, um private Listen zu führen.</p>
             <form id="login-form" class="space-y-4">
                 <div>
-                    <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">E-Mail-Adresse</label>
-                    <input type="email" id="auth-email" required class="w-full px-4 py-2 border border-slate-300 rounded-lg">
+                    <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">E-Mail-Adresse</label>
+                    <input type="email" id="auth-email" required class="w-full px-4 py-2 bg-slate-50 border border-slate-200 dark:bg-slate-950 dark:border-slate-800 rounded-xl text-sm">
                 </div>
                 <div>
-                    <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Passwort</label>
-                    <input type="password" id="auth-password" required minlength="6" class="w-full px-4 py-2 border border-slate-300 rounded-lg">
+                    <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Passwort</label>
+                    <input type="password" id="auth-password" required minlength="6" class="w-full px-4 py-2 bg-slate-50 border border-slate-200 dark:bg-slate-950 dark:border-slate-800 rounded-xl text-sm">
                 </div>
                 <div class="flex gap-2 pt-2">
-                    <button type="button" id="btn-close-modal" class="flex-1 px-4 py-2 border border-slate-300 text-slate-700 rounded-lg">Abbrechen</button>
-                    <button type="submit" id="btn-submit-auth" class="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg">Bestätigen</button>
+                    <button type="button" id="btn-close-modal" class="flex-1 px-4 py-2 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 rounded-xl text-sm hover:bg-slate-50 dark:hover:bg-slate-800">Abbrechen</button>
+                    <button type="submit" id="btn-submit-auth" class="flex-1 px-4 py-2 bg-blue-600 text-white rounded-xl text-sm font-medium hover:bg-blue-700">Bestätigen</button>
                 </div>
             </form>
         </div>
     </div>
 
-    <footer class="bg-white border-t border-slate-200 py-6 mt-12 text-center text-xs text-slate-400">
-        <p>&copy; 2026 ClassTask. Bereitgestellt für die ganze Klasse.</p>
+    <footer class="bg-white dark:bg-slate-950 border-t border-slate-200 dark:border-slate-900 py-6 text-center text-xs text-slate-400 dark:text-slate-600 transition-colors duration-200">
+        <p>&copy; 2026 ClassTask. Engine live.</p>
     </footer>
 
     <script>
@@ -91,10 +132,12 @@
         let user = null;
         let todos = [];
 
+        const themeToggle = document.getElementById('theme-toggle');
         const tabPublic = document.getElementById('tab-public');
         const tabPrivate = document.getElementById('tab-private');
         const todoForm = document.getElementById('todo-form');
         const todoInput = document.getElementById('todo-input');
+        const todoDeadline = document.getElementById('todo-deadline');
         const todoList = document.getElementById('todo-list');
         const emptyState = document.getElementById('empty-state');
         const authStatus = document.getElementById('auth-status');
@@ -119,12 +162,23 @@
             fetchTodos();
         }
 
+        // Darkmode Umschalt-Logik
+        themeToggle.addEventListener('click', () => {
+            if (document.documentElement.classList.contains('dark')) {
+                document.documentElement.classList.remove('dark');
+                localStorage.setItem('theme', 'light');
+            } else {
+                document.documentElement.classList.add('dark');
+                localStorage.setItem('theme', 'dark');
+            }
+        });
+
         function updateUser(userData) {
             user = userData;
             if (user) {
                 authStatus.innerHTML = `
-                    <span class="text-sm text-slate-600 hidden sm:inline">${user.email}</span>
-                    <button id="btn-logout" class="text-sm font-medium text-red-600 border border-red-200 hover:bg-red-50 px-3 py-1.5 rounded-lg">Abmelden</button>
+                    <span class="text-xs text-slate-400 dark:text-slate-500 hidden sm:inline" translate="no">${user.email}</span>
+                    <button id="btn-logout" class="text-xs font-semibold text-red-600 dark:text-red-400 border border-red-200 dark:border-red-950/60 hover:bg-red-50 dark:hover:bg-red-950/20 px-3 py-1.5 rounded-xl transition-all">Logout</button>
                 `;
                 document.getElementById('btn-logout').addEventListener('click', async () => {
                     await supabaseClient.auth.signOut();
@@ -132,7 +186,7 @@
                 });
             } else {
                 authStatus.innerHTML = `
-                    <button id="btn-open-login" class="text-sm font-medium bg-slate-900 text-white hover:bg-slate-800 px-4 py-1.5 rounded-lg shadow-sm">Anmelden</button>
+                    <button id="btn-open-login" class="text-sm font-medium bg-slate-900 text-white hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-slate-200 px-4 py-1.5 rounded-xl transition-all">Anmelden</button>
                 `;
                 document.getElementById('btn-open-login').addEventListener('click', () => loginModal.classList.remove('hidden'));
             }
@@ -149,7 +203,7 @@
                 query = query.eq('is_public', true);
             } else {
                 if (!user) {
-                    todoList.innerHTML = `<li class="text-center py-6 text-slate-500">Bitte melde dich an, um deine privaten ToDos zu sehen.</li>`;
+                    todoList.innerHTML = `<li class="text-center py-8 text-sm text-slate-400 dark:text-slate-600">Bitte melde dich an, um deine privaten ToDos zu sehen.</li>`;
                     emptyState.classList.add('hidden');
                     return;
                 }
@@ -178,17 +232,40 @@
 
             todos.forEach(todo => {
                 const li = document.createElement('li');
-                li.className = "flex items-center justify-between p-4 bg-white border border-slate-200 rounded-lg shadow-sm";
+                li.className = "flex items-center justify-between p-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800/80 rounded-xl shadow-sm hover:border-slate-300 dark:hover:border-slate-700 transition-all group";
+                
                 const isChecked = todo.is_completed ? 'checked' : '';
-                const textStyle = todo.is_completed ? 'line-through text-slate-400' : 'text-slate-700';
+                const textStyle = todo.is_completed ? 'line-through text-slate-400 dark:text-slate-600 font-normal' : 'text-slate-800 dark:text-slate-200 font-medium';
+
+                // Deadline Badge erstellen, falls ein Datum existiert
+                let deadlineBadge = '';
+                if (todo.deadline && !todo.is_completed) {
+                    const deadlineDate = new Date(todo.deadline);
+                    const today = new Date();
+                    today.setHours(0,0,0,0);
+                    
+                    const timeDiff = deadlineDate - today;
+                    const daysDiff = Math.ceil(timeDiff / (1000 * 60 * 60 * 24));
+                    
+                    let badgeColor = "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400";
+                    if (daysDiff <= 2) badgeColor = "bg-red-50 text-red-600 dark:bg-red-950/30 dark:text-red-400 font-semibold";
+                    else if (daysDiff <= 5) badgeColor = "bg-amber-50 text-amber-600 dark:bg-amber-950/30 dark:text-amber-400 font-semibold";
+
+                    // Formatiere das Datum leserlich (TT.MM.JJJJ)
+                    const formattedDate = deadlineDate.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' });
+                    deadlineBadge = `<span class="text-xs px-2 py-1 rounded-md tabular-numbers ${badgeColor}">📅 ${formattedDate}</span>`;
+                }
 
                 li.innerHTML = `
-                    <div class="flex items-center gap-3">
-                        <input type="checkbox" ${isChecked} data-id="${todo.id}" class="todo-toggle w-5 h-5 rounded text-blue-600 border-slate-300">
-                        <span class="${textStyle} font-medium">${escapeHTML(todo.title)}</span>
+                    <div class="flex items-center gap-3.5 flex-grow mr-2 min-w-0">
+                        <input type="checkbox" ${isChecked} data-id="${todo.id}" class="todo-toggle w-5 h-5 rounded-lg border-slate-300 dark:border-slate-700 text-blue-600 focus:ring-blue-500 bg-slate-50 dark:bg-slate-950 cursor-pointer transition-all">
+                        <div class="flex flex-col sm:flex-row sm:items-center gap-1.5 sm:gap-3 min-w-0 flex-grow">
+                            <span class="${textStyle} text-sm truncate">${escapeHTML(todo.title)}</span>
+                            <div class="shrink-0">${deadlineBadge}</div>
+                        </div>
                     </div>
-                    <button data-id="${todo.id}" class="todo-delete text-slate-400 hover:text-red-600 p-1 rounded">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                    <button data-id="${todo.id}" class="todo-delete text-slate-300 dark:text-slate-700 hover:text-red-500 dark:hover:text-red-400 p-1.5 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800/60 opacity-100 sm:opacity-0 group-hover:opacity-100 transition-all" aria-label="Aufgabe löschen">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
                     </button>
                 `;
                 todoList.appendChild(li);
@@ -199,17 +276,17 @@
             e.preventDefault();
             const btn = document.getElementById('btn-submit-todo');
             const title = todoInput.value.trim();
+            const deadline = todoDeadline.value || null; // Fängt leere Deadlines ab
             if (!title || !supabaseClient) return;
 
             btn.disabled = true;
-            btn.innerText = "Speichert…";
+            btn.innerText = "…";
 
             const isPublic = (currentTab === 'public');
-            
-            // Verhindert, dass ein leerer String als UUID gesendet wird
             const payload = { 
                 title: title, 
-                is_public: isPublic
+                is_public: isPublic,
+                deadline: deadline
             };
             
             if (user && user.id) {
@@ -225,6 +302,7 @@
                 showError("Fehler beim Hinzufügen: " + error.message);
             } else { 
                 todoInput.value = ''; 
+                todoDeadline.value = '';
                 fetchTodos(); 
             }
         });
@@ -267,12 +345,12 @@
         function switchTab(tab) {
             currentTab = tab;
             if (tab === 'public') {
-                tabPublic.className = "flex-1 py-3 text-center font-medium border-b-2 border-blue-600 text-blue-600";
-                tabPrivate.className = "flex-1 py-3 text-center font-medium border-b-2 border-transparent text-slate-500 hover:text-slate-800";
+                tabPublic.className = "flex-1 py-2.5 text-center text-sm font-medium rounded-lg bg-white dark:bg-slate-800 text-blue-600 dark:text-blue-400 shadow-sm transition-all duration-200";
+                tabPrivate.className = "flex-1 py-2.5 text-center text-sm font-medium rounded-lg text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 transition-all duration-200";
                 todoInput.placeholder = "Neue Aufgabe für die Klasse hinzufügen…";
             } else {
-                tabPrivate.className = "flex-1 py-3 text-center font-medium border-b-2 border-blue-600 text-blue-600";
-                tabPublic.className = "flex-1 py-3 text-center font-medium border-b-2 border-transparent text-slate-500 hover:text-slate-800";
+                tabPrivate.className = "flex-1 py-2.5 text-center text-sm font-medium rounded-lg bg-white dark:bg-slate-800 text-blue-600 dark:text-blue-400 shadow-sm transition-all duration-200";
+                tabPublic.className = "flex-1 py-2.5 text-center text-sm font-medium rounded-lg text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 transition-all duration-200";
                 todoInput.placeholder = "Persönliche, private Aufgabe hinzufügen…";
             }
             fetchTodos();
