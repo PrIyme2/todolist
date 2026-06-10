@@ -9,7 +9,6 @@
     <style>
         *:focus-visible { outline: 2px solid #2563eb; outline-offset: 2px; }
         .tabular-numbers { font-variant-numeric: tabular-nums; }
-        .fade-transition { transition: opacity 0.2s ease, transform 0.2s ease; }
     </style>
 </head>
 <body class="bg-slate-50 text-slate-900 font-sans antialiased min-h-screen flex flex-col">
@@ -38,14 +37,14 @@
         </div>
 
         <div id="error-toast" class="hidden mb-4 p-4 bg-red-50 border border-red-200 text-red-700 rounded-lg flex flex-col gap-1" role="alert">
-            <span class="font-bold">Datenbank-Meldung:</span>
+            <span class="font-bold">Meldung:</span>
             <span id="error-message" class="font-mono text-sm break-all"></span>
         </div>
 
         <form id="todo-form" class="mb-6 flex gap-2">
             <input type="text" id="todo-input" required minlength="2" placeholder="Neue Aufgabe für die Klasse hinzufügen…" 
                    class="flex-grow px-4 py-2.5 bg-white border border-slate-300 rounded-lg shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-base">
-            <button type="submit" id="btn-submit-todo" class="bg-blue-600 hover:bg-blue-700 text-white font-medium px-5 py-2.5 rounded-lg shadow-sm transition-all">
+            <button type="submit" id="btn-submit-todo" class="bg-blue-600 hover:bg-blue-700 text-white font-medium px-5 py-2.5 rounded-lg shadow-sm">
                 Hinzufügen
             </button>
         </form>
@@ -87,8 +86,7 @@
         const SUPABASE_URL = "https://tlsrphqvnpvjaansofps.supabase.co";
         const SUPABASE_ANON_KEY = "sb_publishable_MHgFfuEb1Z8_Yq4vqfS2lg_QSvbeOUG";
         
-        const supabase = window.supabase ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
-
+        let supabaseClient = null;
         let currentTab = 'public'; 
         let user = null;
         let todos = [];
@@ -103,14 +101,21 @@
         const loginModal = document.getElementById('login-modal');
         const loginForm = document.getElementById('login-form');
 
-        async function init() {
-            setupEventListeners();
-            if(!supabase) {
-                showError("Der Supabase-Client wurde nicht korrekt initialisiert.");
-                return;
+        // Funktion wartet, bis die Bibliothek im Window-Objekt registriert ist
+        function startInitialization() {
+            if (window.supabase && typeof window.supabase.createClient === 'function') {
+                supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+                initApp();
+            } else {
+                // Falls CDN verzögert lädt, in 100ms nochmal probieren
+                setTimeout(startInitialization, 100);
             }
+        }
+
+        async function initApp() {
+            setupEventListeners();
             try {
-                const { data: { session } } = await supabase.auth.getSession();
+                const { data: { session } } = await supabaseClient.auth.getSession();
                 updateUser(session?.user ?? null);
             } catch(e) {}
             fetchTodos();
@@ -124,7 +129,7 @@
                     <button id="btn-logout" class="text-sm font-medium text-red-600 border border-red-200 hover:bg-red-50 px-3 py-1.5 rounded-lg">Abmelden</button>
                 `;
                 document.getElementById('btn-logout').addEventListener('click', async () => {
-                    await supabase.auth.signOut();
+                    await supabaseClient.auth.signOut();
                     window.location.reload();
                 });
             } else {
@@ -137,10 +142,10 @@
         }
 
         async function fetchTodos() {
-            if(!supabase) return;
+            if(!supabaseClient) return;
             document.getElementById('error-toast').classList.add('hidden');
             
-            let query = supabase.from('todos').select('*');
+            let query = supabaseClient.from('todos').select('*');
 
             if (currentTab === 'public') {
                 query = query.eq('is_public', true);
@@ -175,7 +180,7 @@
 
             todos.forEach(todo => {
                 const li = document.createElement('li');
-                li.className = "flex items-center justify-between p-4 bg-white border border-slate-200 rounded-lg shadow-sm animate-fade-in";
+                li.className = "flex items-center justify-between p-4 bg-white border border-slate-200 rounded-lg shadow-sm";
                 const isChecked = todo.is_completed ? 'checked' : '';
                 const textStyle = todo.is_completed ? 'line-through text-slate-400' : 'text-slate-700';
 
@@ -196,7 +201,7 @@
             e.preventDefault();
             const btn = document.getElementById('btn-submit-todo');
             const title = todoInput.value.trim();
-            if (!title || !supabase) return;
+            if (!title || !supabaseClient) return;
 
             btn.disabled = true;
             btn.innerText = "Speichert…";
@@ -208,7 +213,7 @@
                 user_id: user ? user.id : null 
             };
 
-            const { error } = await supabase.from('todos').insert([payload]);
+            const { error } = await supabaseClient.from('todos').insert([payload]);
             
             btn.disabled = false;
             btn.innerText = "Hinzufügen";
@@ -225,12 +230,12 @@
             const target = e.target;
             if (target.classList.contains('todo-toggle')) {
                 const id = target.getAttribute('data-id');
-                await supabase.from('todos').update({ is_completed: target.checked }).eq('id', id);
+                await supabaseClient.from('todos').update({ is_completed: target.checked }).eq('id', id);
                 fetchTodos();
             }
             if (target.closest('.todo-delete')) {
                 const id = target.closest('.todo-delete').getAttribute('data-id');
-                await supabase.from('todos').delete().eq('id', id);
+                await supabaseClient.from('todos').delete().eq('id', id);
                 fetchTodos();
             }
         });
@@ -240,9 +245,9 @@
             const email = document.getElementById('auth-email').value;
             const password = document.getElementById('auth-password').value;
 
-            let { error } = await supabase.auth.signInWithPassword({ email, password });
+            let { error } = await supabaseClient.auth.signInWithPassword({ email, password });
             if (error) {
-                let { error: signUpError } = await supabase.auth.signUp({ email, password });
+                let { error: signUpError } = await supabaseClient.auth.signUp({ email, password });
                 error = signUpError;
             }
 
@@ -271,12 +276,12 @@
         }
 
         async function updateCounts() {
-            if (!supabase) return;
+            if (!supabaseClient) return;
             try {
-                const { count: pubCount } = await supabase.from('todos').select('*', { count: 'exact', head: true }).eq('is_public', true);
+                const { count: pubCount } = await supabaseClient.from('todos').select('*', { count: 'exact', head: true }).eq('is_public', true);
                 document.getElementById('count-public').innerText = pubCount || 0;
                 if (user) {
-                    const { count: privCount } = await supabase.from('todos').select('*', { count: 'exact', head: true }).eq('is_public', false).eq('user_id', user.id);
+                    const { count: privCount } = await supabaseClient.from('todos').select('*', { count: 'exact', head: true }).eq('is_public', false).eq('user_id', user.id);
                     document.getElementById('count-private').innerText = privCount || 0;
                 } else document.getElementById('count-private').innerText = '0';
             } catch(e) {}
@@ -289,7 +294,8 @@
         }
         function escapeHTML(str) { return str ? str.replace(/[&<>'"]/g, t => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[t] || t)) : ''; }
 
-        document.addEventListener('DOMContentLoaded', init);
+        // Starten, sobald das DOM bereit ist
+        document.addEventListener('DOMContentLoaded', startInitialization);
     </script>
 </body>
 </html>
