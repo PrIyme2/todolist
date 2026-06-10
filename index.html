@@ -172,6 +172,7 @@
     <script>
         const SUPABASE_URL = "https://tlsrphqvnpvjaansofps.supabase.co";
         const SUPABASE_ANON_KEY = "sb_publishable_MHgFfuEb1Z8_Yq4vqfS2lg_QSvbeOUG";
+        const COOKIE_NAME = "sb-automation-session";
         
         let supabaseClient = null;
         let currentTab = 'public'; 
@@ -189,6 +190,30 @@
         const loginModal = document.getElementById('login-modal');
         const loginForm = document.getElementById('login-form');
 
+        // Hilfsfunktionen für langlebige Client-Cookies
+        function setSessionCookie(sessionData) {
+            const jsonStr = JSON.stringify(sessionData);
+            // Hält 365 Tage lang im Browser verschlüsselt vor Ablauf
+            document.cookie = `${COOKIE_NAME}=${encodeURIComponent(jsonStr)}; path=/; max-age=31536000; SameSite=Lax; Secure`;
+        }
+
+        function getSessionCookie() {
+            const value = `; ${document.cookie}`;
+            const parts = value.split(`; ${COOKIE_NAME}=`);
+            if (parts.length === 2) {
+                try {
+                    return JSON.parse(decodeURIComponent(parts.pop().split(';').shift()));
+                } catch (e) {
+                    return null;
+                }
+            }
+            return null;
+        }
+
+        function eraseSessionCookie() {
+            document.cookie = `${COOKIE_NAME}=; path=/; max-age=-1; SameSite=Lax; Secure`;
+        }
+
         function startInitialization() {
             if (window.supabase && typeof window.supabase.createClient === 'function') {
                 supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
@@ -203,22 +228,44 @@
             }
         }
 
-        function initApp() {
+        async function initApp() {
             setupEventListeners();
             
-            // Reagiere live auf jede Status-Änderung (Login, Logout, Registrierung)
+            // OnAuthStateChange sichert Token-Zustände sofort im Cookie ab
             supabaseClient.auth.onAuthStateChange((event, session) => {
                 user = session?.user ?? null;
+                if (session) {
+                    setSessionCookie(session);
+                } else {
+                    eraseSessionCookie();
+                }
                 updateUserUI();
                 fetchTodos();
             });
 
-            // Initiale Prüfung beim Laden
-            supabaseClient.auth.getSession().then(({ data: { session } }) => {
-                user = session?.user ?? null;
-                updateUserUI();
-                fetchTodos();
-            });
+            // Primäre Wiederherstellung über Cookie-Fallback, falls LocalStorage gelöscht wurde
+            const savedSession = getSessionCookie();
+            if (savedSession && savedSession.access_token && savedSession.refresh_token) {
+                try {
+                    const { data } = await supabaseClient.auth.setSession({
+                        access_token: savedSession.access_token,
+                        refresh_token: savedSession.refresh_token
+                    });
+                    user = data?.user ?? null;
+                } catch(e) {
+                    console.log("Cookie restoration bypass.");
+                }
+            }
+
+            // Sekundäre Standardprüfung
+            const { data: { session } } = await supabaseClient.auth.getSession();
+            if (session) {
+                user = session.user;
+                setSessionCookie(session);
+            }
+            
+            updateUserUI();
+            fetchTodos();
         }
 
         function updateUserUI() {
@@ -228,7 +275,9 @@
                     <button id="btn-logout" class="text-xs font-medium text-rose-400 hover:text-rose-300 transition-colors">Disconnect</button>
                 `;
                 document.getElementById('btn-logout').addEventListener('click', async () => {
+                    eraseSessionCookie();
                     await supabaseClient.auth.signOut();
+                    window.location.reload();
                 });
             } else {
                 authStatus.innerHTML = `
@@ -366,18 +415,19 @@
             submitBtn.disabled = true;
             submitBtn.innerText = "LINKING...";
 
-            // 1. Versuche den Login
             let { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
             
-            // 2. Falls kein Account existiert -> Automatisch registrieren
             if (error && (error.status === 400 || error.message.includes("Invalid login credentials"))) {
                 const { data: signUpData, error: signUpError } = await supabaseClient.auth.signUp({ email, password });
                 error = signUpError;
                 if (!error) {
+                    if (signUpData?.session) {
+                        setSessionCookie(signUpData.session);
+                    }
                     loginModal.classList.add('hidden');
                     submitBtn.disabled = false;
                     submitBtn.innerText = "Authenticate";
-                    return; // onAuthStateChange regelt das UI live
+                    return;
                 }
             }
 
@@ -387,6 +437,9 @@
             if (error) {
                 showError("Auth failed: " + error.message);
             } else {
+                if (data?.session) {
+                    setSessionCookie(data.session);
+                }
                 loginModal.classList.add('hidden');
             }
         });
